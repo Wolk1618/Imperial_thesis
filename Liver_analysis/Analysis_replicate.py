@@ -10,6 +10,10 @@ features = ['UMAP_1', 'UMAP_2', 'patient']
 # Group the data by patient
 grouped_data = data.groupby('patient')
 
+# Print the number of unique patients
+num_patients = len(grouped_data)
+print("Number of unique patients:", num_patients)
+""" 
 # Create a figure
 fig, ax = plt.subplots(figsize=(10, 5))
 
@@ -26,7 +30,7 @@ ax.set_title('Patient Analysis')
 ax.legend()
 
 # Show the plot
-plt.show()
+plt.show() """
 
 """
 # Create a figure with two subplots

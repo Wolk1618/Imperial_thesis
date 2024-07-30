@@ -47,5 +47,8 @@ model.add(Dense(1, activation='sigmoid'))
 # Compile the model
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
+# Print the number of parameters in the model
+print("Number of parameters:", model.count_params())
+
 # Train the model
-model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
+#model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))

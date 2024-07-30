@@ -7,9 +7,10 @@ import scipy.sparse as sp
 from keras.layers import Dropout
 from scipy.io import mmread
 from keras.utils import Sequence
+import keras
 
 
-class DataGenerator(Sequence):
+""" class DataGenerator(Sequence):
     def __init__(self, X, y, batch_size):
         self.X = X
         self.y = y
@@ -65,7 +66,7 @@ df = pd.DataFrame.sparse.from_spmatrix(df, index=filtered_barcodes_data, columns
 df['type'] = annot_data_labels
 df['healthy'] = df['type'].str.startswith("SD").astype(int)
 # Remove the 'type' column from sparse_df
-df = df.drop('type', axis=1)
+df = df.drop('type', axis=1) """
 #print(sparse_df.sample(n=20))
 """ 
 # Convert df to a CSR matrix
@@ -87,7 +88,7 @@ print("Dataframe saved to local storage")
 # Load sparse_df from local storage
 sparse_df = pd.read_csv('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/sparse_df.csv')
  """
-labels = df['healthy']
+""" labels = df['healthy']
 dataset = df.drop('healthy', axis=1)
 
 del sparse_df
@@ -123,4 +124,11 @@ model.fit(train_generator, epochs=5, validation_data=(X_test, y_test))
 
 # Save the model to local storage
 model.save('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/model_raw.h5')
-print("Model saved to local storage")
+print("Model saved to local storage") """
+
+# Load the model from local storage
+loaded_model = keras.models.load_model('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/model_raw.h5')
+
+# Print the number of parameters in the model
+num_params = loaded_model.count_params()
+print("Number of parameters in the model:", num_params)
