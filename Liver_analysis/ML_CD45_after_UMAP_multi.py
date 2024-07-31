@@ -6,6 +6,8 @@ import pandas as pd
 from keras.layers import Dropout
 from keras.layers import BatchNormalization
 from keras.utils import to_categorical
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 # Load the annot_cd45pos.csv file
@@ -72,3 +74,23 @@ print("Number of parameters:", model.count_params())
 
 # Train the model
 model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
+
+# Print the confusion matrix
+y_pred = model.predict(X_test)
+y_pred = np.argmax(y_pred, axis=1)
+y_test = np.argmax(y_test, axis=1)
+confusion_matrix = np.zeros((num_classes, num_classes))
+
+for i in range(len(y_test)):
+    confusion_matrix[y_test[i], y_pred[i]] += 1
+
+print("Confusion matrix:")
+print(confusion_matrix.astype(int))
+
+# Plot the confusion matrix as an image
+plt.figure(figsize=(8, 6))
+sns.heatmap(confusion_matrix, annot=True, cmap='Blues')
+plt.xlabel('Predicted Labels')
+plt.ylabel('True Labels')
+plt.title('Confusion Matrix')
+plt.show()
