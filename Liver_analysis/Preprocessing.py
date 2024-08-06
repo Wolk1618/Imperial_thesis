@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.io import mmread
 from scipy.sparse import csr_matrix
+import scvi
+from SCTransform import SCTransform
 
 
 # Utility function to calculate outliers
@@ -106,16 +108,30 @@ seuratObj.obs["percent.mito"] = adata.obs["pct_counts_mito"][~metaData["final.dr
 ##### HERE #####
 ################
 
-# Add sample names to orig.ident
-for i in range(1, len(barcodes)):
+# Add sample names to seurat object
+for i in listLabels:
     toSearch = f"-{i}"
-    seuratObj.obs.loc[seuratObj.obs_names.str.contains(toSearch), "orig.ident"] = barcodes[0][i]
+    seuratObj.obs.loc[seuratObj.obs_names.str.contains(toSearch), "orig.ident"] = i
 
-# Save seuratObj before tricky part
+""" # Save seuratObj before tricky part
 seuratObj.write("work/data/seuratObj.h5ad")
 
 # Load the object
-seuratObj = sc.read("work/data/seuratObj.h5ad")
+seuratObj = sc.read("work/data/seuratObj.h5ad") """
+
+# Remove duplicate columns in seuratObj.var
+seuratObj.var.drop("name", axis=1, inplace=True)
+
+# Remove duplicate columns in seuratObj.obs
+seuratObj.obs.drop("barcode", axis=1, inplace=True)
+
+###### SCT ########
+
+SCTransform(seuratObj)
+
+print("SCT done")
+
+#####################
 
 # Normalize SCT
 sc.pp.normalize_total(seuratObj, target_sum=1e4)

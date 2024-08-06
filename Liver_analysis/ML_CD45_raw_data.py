@@ -1,16 +1,18 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
-from keras.models import Sequential
-from keras.layers import Dense
 import pandas as pd
 import scipy.sparse as sp
-from keras.layers import Dropout
 from scipy.io import mmread
-from keras.utils import Sequence
+
 import keras
+from keras.models import Sequential
+from keras.layers import Dense, Dropout
+from keras.utils import Sequence, to_categorical
+from keras.optimizers import Adam
+from keras.callbacks import EarlyStopping
 
 
-""" class DataGenerator(Sequence):
+class DataGenerator(Sequence):
     def __init__(self, X, y, batch_size):
         self.X = X
         self.y = y
@@ -25,12 +27,11 @@ import keras
         return batch_X, batch_y
 
 
-# Load the matrix.mtx file
+# Load the matrix.mtx file and convert it to CSR format
 matrix = mmread('./data/cd45+/matrix.mtx')
-# Convert the matrix to CSR format
 matrix_csr = matrix.tocsr()
 
-# Load the barcodes.tsv file
+# Load the gene names from features.tsv file
 barcodes_data = np.loadtxt('./data/cd45+/barcodes.tsv', dtype=str)
 
 # Load the cell names from annot_cd45pos.csv file
@@ -65,43 +66,45 @@ df = pd.DataFrame.sparse.from_spmatrix(df, index=filtered_barcodes_data, columns
 # Add a new column 'healthy' to df
 df['type'] = annot_data_labels
 df['healthy'] = df['type'].str.startswith("SD").astype(int)
-# Remove the 'type' column from sparse_df
-df = df.drop('type', axis=1) """
-#print(sparse_df.sample(n=20))
-""" 
-# Convert df to a CSR matrix
-csr_matrix = pd.DataFrame.sparse.from_spmatrix(df).sparse.to_csr()
+df = df.drop('type', axis=1)
 
 # Create a new sparse DataFrame from the CSR matrix
+csr_matrix = pd.DataFrame.sparse.from_spmatrix(df).sparse.to_csr()
 df = pd.DataFrame.sparse.from_spmatrix(csr_matrix, index=filtered_barcodes_data, columns=df_features['name'])
 
 # Make the DataFrame sparse
 csr_matrix = sp.coo_matrix(df.values)
 sparse_df = pd.DataFrame.sparse.from_spmatrix(csr_matrix, index=filtered_barcodes_data, columns=df_features['name'])
 
-# Store sparse_df to local storage
+""" # Store sparse_df to local storage
 csr_matrix = df.sparse.to_coo().tocsr()
 #sp.save_npz('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/sparse_df.npz', csr_matrix)
 print("Dataframe saved to local storage")
 
-
 # Load sparse_df from local storage
-sparse_df = pd.read_csv('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/sparse_df.csv')
- """
-""" labels = df['healthy']
+sparse_df = pd.read_csv('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/sparse_df.csv') """
+
+# Convert the 'healthy' column to one-hot encoding
+labels = to_categorical(df['healthy'], num_classes=2)
 dataset = df.drop('healthy', axis=1)
-
-del sparse_df
-del df
-
-print("Before splitting the dataset")
 
 # Split the dataset into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(dataset, labels, test_size=0.2, random_state=42)
 
-print("After splitting the dataset")
+# Deleting useless variables to free up memory
+del sparse_df
+del df
+del dataset
+del labels
 
-# Define the model architecture
+# Define the generator
+train_generator = DataGenerator(X_train, y_train, batch_size=64)
+
+########################################
+#############  BASE MODEL  #############
+########################################
+
+""" # Define the model architecture
 model = Sequential()
 model.add(Dense(256, activation='relu', input_dim=dataset.shape[1]))
 model.add(Dropout(0.3))
@@ -112,23 +115,59 @@ model.add(Dense(1, activation='sigmoid'))
 # Compile the model
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-# Define the generator
-train_generator = DataGenerator(X_train, y_train, batch_size=64)
+# Train the model
+model.fit(train_generator, epochs=5, validation_data=(X_test, y_test)) """
 
-print("Before training the model")
-del dataset
-del labels
+
+########################################
+###### MODEL PROPOSED BY MISTRAL #######
+########################################
+
+# Define the model
+model = Sequential([
+    Dense(1024, activation='relu', input_dim=dataset.shape[1]),
+    Dropout(0.5),
+    Dense(512, activation='relu'),
+    Dropout(0.5),
+    Dense(256, activation='relu'),
+    Dropout(0.5),
+    Dense(128, activation='relu'),
+    Dropout(0.5),
+    Dense(2, activation='softmax')
+])
+
+# Compile the model
+model.compile(optimizer=Adam(learning_rate=0.001),
+              loss='binary_crossentropy',
+              metrics=['accuracy'])
+
+# Early stopping callback
+early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+
+# Print the model informations
+model.summary()
 
 # Train the model
-model.fit(train_generator, epochs=5, validation_data=(X_test, y_test))
+history = model.fit(train_generator,
+                    epochs=100,
+                    validation_split=0.2,
+                    callbacks=[early_stopping])
+
+########################################
+########################################
+########################################
+
+# Evaluate the model
+loss, accuracy = model.evaluate(X_test, y_test)
+print(f'Test Accuracy: {accuracy}')
 
 # Save the model to local storage
 model.save('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/model_raw.h5')
-print("Model saved to local storage") """
+print("Model saved to local storage")
 
-# Load the model from local storage
+""" # Load the model from local storage
 loaded_model = keras.models.load_model('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/model_raw.h5')
 
 # Print the number of parameters in the model
 num_params = loaded_model.count_params()
-print("Number of parameters in the model:", num_params)
+print("Number of parameters in the model:", num_params) """
