@@ -162,7 +162,7 @@ loss, accuracy = model.evaluate(X_test, y_test)
 print(f'Test Accuracy: {accuracy}')
 
 # Save the model to local storage
-model.save('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/model_raw.h5')
+model.save('./data/model_raw.h5')
 print("Model saved to local storage")
 
 """ # Load the model from local storage
