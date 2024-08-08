@@ -45,7 +45,7 @@ barcodes_data = np.loadtxt('./data/cd45+/barcodes.tsv', dtype=str)
 # Load the cell names from annot_cd45pos.csv file
 annot_data_cell_names = np.loadtxt('./data/cd45+/annot_cd45pos.csv', delimiter=',', usecols=(0), dtype=str)
 # Remove the " at the beginning and end of each string element
-annot_data_cell_names = [s.strip('"') for s in annot_data_cell_names][1:]
+annot_data_cell_names = np.array([s.strip('"') for s in annot_data_cell_names][1:])
 
 # Filtering the CSR matrix
 filtered_barcodes_data = np.intersect1d(barcodes_data, annot_data_cell_names)
@@ -61,8 +61,7 @@ annot_data_labels = np.loadtxt('./data/cd45+/annot_cd45pos.csv', delimiter=',', 
 annot_data_labels = [s.strip('"') for s in annot_data_labels][1:]
 
 # Reorder annot_data_labels to match barcodes_data
-filtered_data_labels_index = [np.where(annot_data_cell_names == barcode)[0] for barcode in filtered_barcodes_data]
-print(filtered_data_labels_index)
+filtered_data_labels_index = [np.where(annot_data_cell_names == barcode)[0][0] for barcode in filtered_barcodes_data]
 annot_data_labels_reordered = [annot_data_labels[i] for i in filtered_data_labels_index]
 annot_data_labels = annot_data_labels_reordered
 
