@@ -74,7 +74,7 @@ del annot_data_cell_names
 del annot_data_labels_reordered
 
 # Create a dense DataFrame from the CSR matrix
-df = pd.DataFrame(filtered_matrix_csr.toarray(), index=filtered_barcodes_data, columns=df_features['name'])
+df = pd.DataFrame(filtered_matrix_csr.toarray().T, index=filtered_barcodes_data, columns=df_features['name'])
 
 # Load the sparse matrix into a DataFrame
 # sparse_df = pd.DataFrame.sparse.from_spmatrix(filtered_matrix_csr)
@@ -103,7 +103,7 @@ print("Dataframe saved to local storage")
 sparse_df = pd.read_csv('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/sparse_df.csv') """
 
 # Convert the 'healthy' column to one-hot encoding
-df = df.head(100).copy()
+#df = df.head(100).copy()
 labels = to_categorical(df['healthy'], num_classes=2)
 dataset = df.drop('healthy', axis=1)
 
@@ -111,9 +111,9 @@ dataset = df.drop('healthy', axis=1)
 X_train, X_test, y_train, y_test = train_test_split(dataset, labels, test_size=0.2, random_state=42)
 
 # Deleting useless variables to free up memory
-""" del df
-del dataset
-del labels """
+del df
+# del dataset
+del labels
 
 # Define the generator
 #train_generator = DataGenerator(X_train, y_train, batch_size=100)

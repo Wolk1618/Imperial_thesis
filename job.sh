@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -l select=1:ncpus=16:mem=32gb:ngpus=1:gpu_type=RTX6000
+#PBS -l select=1:ncpus=16:mem=64gb:ngpus=1:gpu_type=RTX6000
 #PBS -l walltime=1:00:00
 #PBS -N raw_rnaseq_nn_gpu
  
