@@ -1,7 +1,6 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
 import pandas as pd
-import scipy.sparse as sp
 from scipy.io import mmread
 
 import tensorflow as tf
@@ -11,6 +10,9 @@ from keras.layers import Dense, Dropout, Input
 from keras.utils import Sequence, to_categorical
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping
+
+import shap
+import matplotlib.pyplot as plt
 
 
 print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
@@ -199,8 +201,15 @@ history = model.fit(X_train, y_train,
 loss, accuracy = model.evaluate(X_test, y_test)
 print(f'Test Accuracy: {accuracy}')
 
+explainer = shap.DeepExplainer(model, X_test)
+shap_values = explainer.shap_values(X_test)
+shap.summary_plot(shap_values, X_test)
+# Store the plot in local storage
+plt.savefig('./data/plot.png')
+print("Plot saved to local storage")
+
 # Save the model to local storage
-model.save('./data/model_raw.h5')
+model.save('./data/model_raw_2.h5')
 print("Model saved to local storage")
 
 """ # Load the model from local storage
