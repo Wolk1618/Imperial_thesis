@@ -86,6 +86,25 @@ df['type'] = annot_data_labels
 df['healthy'] = df['type'].str.startswith("SD").astype(int)
 df = df.drop('type', axis=1)
 
+# Count the number of 1s and 0s in df['healthy']
+num_1 = df['healthy'].sum()
+num_0 = len(df['healthy']) - num_1
+
+# Remove some datapoints with label 0
+num_samples = min(num_0, num_1)
+df_0 = df[df['healthy'] == 0].sample(num_samples, random_state=42)
+df_1 = df[df['healthy'] == 1].sample(num_samples, random_state=42)
+df_balanced = pd.concat([df_0, df_1])
+
+# Shuffle the dataframe
+df_balanced = df_balanced.sample(frac=1, random_state=42)
+
+# Count the number of 1s and 0s in df['healthy']
+num_1 = df_balanced['healthy'].sum()
+num_0 = len(df_balanced['healthy']) - num_1
+print("Number of 1s:", num_1)
+print("Number of 0s:", num_0)
+
 """ # Create a new sparse DataFrame from the CSR matrix
 csr_matrix = pd.DataFrame.sparse.from_spmatrix(df).sparse.to_csr()
 df = pd.DataFrame.sparse.from_spmatrix(csr_matrix, index=filtered_barcodes_data, columns=df_features['name'])
@@ -104,8 +123,8 @@ sparse_df = pd.read_csv('/home/thomas/Documents/Imperial/Thesis/Project_repo/dat
 
 # Convert the 'healthy' column to one-hot encoding
 #df = df.head(100).copy()
-labels = to_categorical(df['healthy'], num_classes=2)
-dataset = df.drop('healthy', axis=1)
+labels = to_categorical(df_balanced['healthy'], num_classes=2)
+dataset = df_balanced.drop('healthy', axis=1)
 
 # Split the dataset into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(dataset, labels, test_size=0.2, random_state=42)
