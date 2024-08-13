@@ -54,7 +54,7 @@ def _parallel_wrapper(j):
     pr = statsmodels.discrete.discrete_model.Poisson(y,mm)
     res = pr.fit(disp=False)
     mu = res.predict()
-    theta = theta_ml(y,mu)
+    theta = theta_ml(y,mu,j)
     ps[name] = np.append(res.params,theta)  
     
     
@@ -63,7 +63,7 @@ def gmean(X,axis=0,eps=1):
     X.data[:] = np.log(X.data+eps)       
     return np.exp(X.mean(axis).A.flatten())+eps
 
-def theta_ml(y,mu):
+def theta_ml(y,mu,j):
     n = y.size
     weights = np.ones(n)
     limit = 10
@@ -77,6 +77,7 @@ def theta_ml(y,mu):
     def info(n,th,mu,y,w):
         return sum(w*( - polygamma(1,th + y) + polygamma(1,th) - 1/th + 2/(mu + th) - (y + th)/(mu + th)**2))
     
+    #print("batch, mu, y : ", j, mu, y)
     t0 = n/sum(weights*(y/mu - 1)**2)
     it = 0
     de = 1
@@ -154,6 +155,7 @@ def SCTransform(adata,min_cells=5,gmean_eps=1,n_genes=2000,n_cells=None,bin_size
 
     bin_ind = np.ceil(np.arange(1,genes_step1.size+1) / bin_size)
     max_bin = max(bin_ind)
+    print("max_bin : ", max_bin)
 
     ps = Manager().dict()
 
@@ -237,36 +239,35 @@ def SCTransform(adata,min_cells=5,gmean_eps=1,n_genes=2000,n_cells=None,bin_size
         Xnew = sp.sparse.coo_matrix((data, (x, y)), shape=adata.shape).tocsr()
         adata.X = Xnew # TODO: add log1p of corrected umi counts to layers
 
-        print("size of data : ", X.shape)
-        print("size of Xnew : ", Xnew.shape)
-        print("size of adata : ", adata)
-        print("size of full_model_pars : ", full_model_pars.shape)
+        # print("size of data : ", X.shape)
+        # print("size of Xnew : ", Xnew.shape)
+        # print("size of adata : ", adata)
+        # print("size of full_model_pars : ", full_model_pars.shape)
 
-        print("full_model_pars : ", full_model_pars)
-        print("full_model_pars.columns : ", full_model_pars.columns)
-        print("adata.var : ", adata.var)
-        print("adata.var.columns : ", adata.var.columns)
-        print("adata.obs : ", adata.obs)
-        print("adata.obs.columns : ", adata.obs.columns)
+        # print("full_model_pars : ", full_model_pars)
+        # print("full_model_pars.columns : ", full_model_pars.columns)
+        # print("adata.var : ", adata.var)
+        # print("adata.var.columns : ", adata.var.columns)
+        # print("adata.obs : ", adata.obs)
+        # print("adata.obs.columns : ", adata.obs.columns)
 
-        print(full_model_pars.index)
-        print(adata.var.index)
+        # print(full_model_pars.index)
+        # print(adata.var.index)
 
         # Store full_model_pars and adata in local storage
-        with open('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/full_model_pars.pkl', 'wb') as f:
-            pickle.dump(full_model_pars, f)
+        # with open('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/full_model_pars.pkl', 'wb') as f:
+        #     pickle.dump(full_model_pars, f)
             
-        with open('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/adata.pkl', 'wb') as f:
-            pickle.dump(adata, f)
+        # with open('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/adata.pkl', 'wb') as f:
+        #     pickle.dump(adata, f)
 
-        extended_model_pars = pd.DataFrame(data = np.zeros((adata.var.shape[0], full_model_pars.shape[1])), index=adata.var.index, columns=full_model_pars.columns)
+        """ extended_model_pars = pd.DataFrame(data = np.zeros((adata.var.shape[0], full_model_pars.shape[1])), index=adata.var.index, columns=full_model_pars.columns)
         full_model_pars = full_model_pars.reindex(extended_model_pars.index)
         extended_model_pars.loc[full_model_pars.index, full_model_pars.columns] = full_model_pars.values
-        full_model_pars = extended_model_pars
-                
+        full_model_pars = extended_model_pars """
+
         
         for c in full_model_pars.columns:
-            print("full_model_pars[c] : ", full_model_pars[c])
             adata.var[c+'_sct'] = full_model_pars[c]
         
         for c in cell_attrs.columns:

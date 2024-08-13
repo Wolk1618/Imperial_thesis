@@ -2,10 +2,8 @@ import scanpy as sc
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 from scipy.io import mmread
 from scipy.sparse import csr_matrix
-import scvi
 from SCTransform import SCTransform
 
 
@@ -22,147 +20,145 @@ def is_outlier(data, nmads=3, type='lower'):
     return outliers
 
 
-# Load data
+###################
+#### Load data ####
+###################
+
 rawData = mmread("./data/cd45+/matrix.mtx")
 barcodes = pd.read_csv("./data/cd45+/barcodes.tsv", header=None, names=["barcode"])
 features = pd.read_csv("./data/cd45+/features.tsv", sep="\t", header=None, names=["code", "name", "type"])
 
 # Create SingleCellExperiment-like object
 adata = sc.AnnData(X=rawData.T, var=features, obs=barcodes)
-adata.var_names = features["name"]
+adata.var_names = features["code"]
 adata.obs_names = barcodes["barcode"]
+
+
+###################
+### Prepare data ##
+###################
 
 # Get mitochondrial genes
 is_mito = adata.var_names.str.startswith("mt-")
 adata.var["mito"] = is_mito
 #print(sum(is_mito))
 
-# Calculate QC metrics
-sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], percent_top=None, log1p=False, inplace=True)
-
 # Rename column name 0 to orig.ident
 adata.obs.rename(columns={"barcode": "orig.ident"}, inplace=True)
 
-
-# Create metaData matrix
-metaData = pd.DataFrame({
-    "staticNr": adata.obs_names,
-    "orig.ident": adata.obs["orig.ident"],
-    "nGene": adata.obs["n_genes_by_counts"],
-    "nUMI": adata.obs["total_counts"],
-    "percent.mito": adata.obs["pct_counts_mito"]
-})
-metaData["staticNr"] = 1
-
 listLabels = list(set([int(str(barcode)[-1]) for barcode in barcodes["barcode"]]))
 
-# Add sample names to metaData
-for i in listLabels:
-    toSearch = f"-{i}"
-    metaData.loc[metaData.index.str.contains(toSearch), "orig.ident"] = i
 
-# Get outliers
-nmad_low_feature = 3
-nmad_high_feature = 3
-nmad_low_UMI = 3
-nmad_high_UMI = 3
-nmad_high_mito = 3
+###################
+### QC filtering ##
+###################
 
-# Calculate outliers
+# Calculate QC metrics
+sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], percent_top=None, log1p=False, inplace=True)
+
+# Set outliers parameters
+nmad_low_feature = 4
+nmad_high_feature = 4
+nmad_low_UMI = 4
+nmad_high_UMI = 4
+nmad_high_mito = 5
+
+# Calculate library size outliers
 feature_drop_low = is_outlier(adata.obs["n_genes_by_counts"], nmads=nmad_low_feature, type='lower')
 feature_drop_high = is_outlier(adata.obs["n_genes_by_counts"], nmads=nmad_high_feature, type='higher')
 feature_drop = feature_drop_low | feature_drop_high
 
+# Calculate library size outliers
 libsize_drop_low = is_outlier(adata.obs["total_counts"], nmads=nmad_low_UMI, type='lower')
 libsize_drop_high = is_outlier(adata.obs["total_counts"], nmads=nmad_high_UMI, type='higher')
 libsize_drop = libsize_drop_low | libsize_drop_high
 
+# Calculate mitochondrial proportion outliers
 mito_drop = is_outlier(adata.obs["pct_counts_mito"], nmads=nmad_high_mito, type='higher')
 
-# Add to metaData matrix
-metaData["nGene.drop"] = feature_drop
-metaData["nUMI.drop"] = libsize_drop
-metaData["mito.drop"] = mito_drop
-metaData["final.drop"] = feature_drop | libsize_drop | mito_drop
+# Combine outliers
+final_drop = feature_drop | libsize_drop | mito_drop
 
 # Remove outliers
-adata = adata[~metaData["final.drop"]]
-
-# Filter rawData
-rawDataFiltered = rawData.tocsr()[:, ~metaData["final.drop"]]
-
-# Filter barcodes
+adata = adata[~final_drop]
+rawDataFiltered = rawData.tocsr()[:, ~final_drop]
 barcodes.set_index('barcode', inplace=True)
-filteredBarcodes = barcodes[~metaData["final.drop"]]
+filteredBarcodes = barcodes[~final_drop]
 filteredBarcodes = filteredBarcodes.reset_index()
+
+
+###################
+##### Seurat ######
+###################
 
 # Create Seurat object
 seuratObj = sc.AnnData(X=rawDataFiltered.T, var=features, obs=filteredBarcodes)
-seuratObj.var_names = features["name"]
+seuratObj.var_names = features["code"]
 seuratObj.obs_names = filteredBarcodes["barcode"]
 
 # Add % mitochondrial genes
-seuratObj.obs["percent.mito"] = adata.obs["pct_counts_mito"][~metaData["final.drop"]]
-
-################
-##### HERE #####
-################
+seuratObj.obs["percent.mito"] = adata.obs["pct_counts_mito"][~final_drop]
 
 # Add sample names to seurat object
 for i in listLabels:
     toSearch = f"-{i}"
     seuratObj.obs.loc[seuratObj.obs_names.str.contains(toSearch), "orig.ident"] = i
 
-""" # Save seuratObj before tricky part
-seuratObj.write("work/data/seuratObj.h5ad")
 
-# Load the object
-seuratObj = sc.read("work/data/seuratObj.h5ad") """
-
-# Remove duplicate columns in seuratObj.var
-seuratObj.var.drop("name", axis=1, inplace=True)
-
-# Remove duplicate columns in seuratObj.obs
-seuratObj.obs.drop("barcode", axis=1, inplace=True)
-
+###################
 ###### SCT ########
+###################
 
 SCTransform(seuratObj)
-
 print("SCT done")
-
-#####################
 
 # Normalize SCT
 sc.pp.normalize_total(seuratObj, target_sum=1e4)
 sc.pp.log1p(seuratObj)
 
-# PCA
+
+###################
+###### PCA ########
+###################
+
 sc.pp.pca(seuratObj, n_comps=50)
 
 # Determine statistically significant PCs
 sc.pl.pca_variance_ratio(seuratObj, n_pcs=40)
-plt.savefig("work/plots/9b_selectPC.png")
+plt.savefig("./data/plots/9b_selectPC.png")
+
+
+###################
+###### UMAP #######
+###################
 
 # Cluster the cells
-dimsToTry = [20]
+dim = 20
 resToUse = 0.8
 
-for maxPCs in dimsToTry:
-    dimsToUse = range(1, maxPCs + 1)
-    print(f"Working on 1:{maxPCs}")
+print(f"Working on UMAP")
 
-    # Find clusters
-    sc.pp.neighbors(seuratObj, n_neighbors=10, n_pcs=maxPCs)
-    sc.tl.louvain(seuratObj, resolution=resToUse)
+# Find clusters
+sc.pp.neighbors(seuratObj, n_neighbors=10, n_pcs=dim)
+sc.tl.louvain(seuratObj, resolution=resToUse)
 
-    # Create tSNE plot
-    sc.tl.tsne(seuratObj, n_pcs=maxPCs)
-    sc.pl.tsne(seuratObj, color="louvain", save=f"work/plots/10a_tSNE_{min(dimsToUse)}-{max(dimsToUse)}.png")
+# Create tSNE plot
+sc.tl.tsne(seuratObj, n_pcs=dim)
+sc.pl.tsne(seuratObj, color="louvain", save=f"/10a_tSNE_{1}-{dim}.png")
 
-    # Create UMAP plot
-    sc.tl.umap(seuratObj, n_neighbors=30, n_pcs=maxPCs)
-    sc.pl.umap(seuratObj, color="louvain", save=f"work/plots/10b_UMAP_{min(dimsToUse)}-{max(dimsToUse)}.png")
+# Create UMAP plot
+sc.tl.umap(seuratObj, n_components=dim)
+sc.pl.umap(seuratObj, color="louvain", save=f"/10b_UMAP_{1}-{dim}.png")
 
-# Save object
-seuratObj.write("work/data/seuratObj.h5ad")
+
+###################
+## Storing data ###
+###################
+
+# Save UMAP coordinates to Excel file
+umap_coords = seuratObj.obsm["X_umap"]
+umap_df = pd.DataFrame(umap_coords[:, :2], columns=["UMAP1", "UMAP2"])
+umap_df["barcode"] = seuratObj.obs_names
+umap_df["percent.mito"] = seuratObj.obs["percent.mito"]
+umap_df = umap_df[["barcode", "percent.mito", "UMAP1", "UMAP2"]]
+umap_df.to_excel("./data/umap_coords.xlsx", index=False)
