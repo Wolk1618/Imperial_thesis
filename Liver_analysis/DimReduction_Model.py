@@ -159,8 +159,8 @@ distances, indices = nbrs.kneighbors(X_train_pca[:, :n_pcs])
 # Create a graph
 G = nx.Graph()
 for i in range(len(indices)):
-    for j in indices[i]:
-        G.add_edge(i, j, weight=distances[i][j])
+    for j in range(len(indices[i])):
+        G.add_edge(i, indices[i][j], weight=distances[i][j])
 
 # Apply Louvain clustering
 partition = community_louvain.best_partition(G, resolution=0.6)
