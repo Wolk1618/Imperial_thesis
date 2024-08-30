@@ -44,19 +44,38 @@ print(y_test)
 ###################
 print("Normalising data")
 
-# Print number of negative values
-print("Number of negative values in X_train:", (X_train < 0).sum().sum())
+# scaler = StandardScaler()
+# X_train_scaled = scaler.fit_transform(X_train)
+# X_test_scaled = scaler.transform(X_test)
+
+# Compute the normalization factors based on the training set
+def compute_normalization_factors(df, target_sum=1e4):
+    # Calculate the total counts per cell
+    cell_totals = df.sum(axis=1)
+    # Calculate the normalization factors
+    normalization_factors = target_sum / cell_totals
+    return normalization_factors
+
+# Normalize by the normalization factors and scale by target_sum
+def apply_normalization(df, normalization_factors, target_sum=1e4):    
+    normalized_df = df.multiply(normalization_factors, axis=0)
+    return normalized_df
+
+
+# Apply the normalization factors to the training and testing sets
+normalization_factors_train = compute_normalization_factors(X_train)
+X_train_normalized = apply_normalization(X_train, normalization_factors_train)
+X_test_normalized = apply_normalization(X_test, normalization_factors_train)
+
+# Log2 Transformation with a pseudocount of 1 to avoid log(0)
+def log2_transform(df):
+    return np.log2(df + 1)
+
+X_train_log2 = log2_transform(X_train_normalized)
+X_test_log2 = log2_transform(X_test_normalized)
 
 # Print number of NaN values
-print("Number of NaN values in X_train:", X_train.isna().sum().sum())
-
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
-
-# Log2 Transformation, adding 1 to avoid log(0)
-X_train_log2 = np.log2(X_train_scaled + 1)
-X_test_log2 = np.log2(X_test_scaled + 1)
+print("Number of NaN values in X_train_scaled:", np.isnan(X_train_log2).sum().sum())
 
 
 # ###################
