@@ -1,4 +1,3 @@
-import scanpy as sc
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,6 +26,8 @@ df_balanced = pd.read_csv("./data/preprocessing_osteopontin.csv")
 # Convert the labels to one-hot encoding
 labels = to_categorical(df_balanced['label'], num_classes=2)
 dataset = df_balanced.drop('label', axis=1)
+dataset.index = df_balanced['barcode']
+dataset = dataset.drop('barcode', axis=1)
 
 # Split the data into train and test sets
 X_train, X_test, y_train, y_test = train_test_split(dataset, labels, test_size=0.2, random_state=42)
@@ -42,6 +43,12 @@ print(y_test)
 ## Normalisation ##
 ###################
 print("Normalising data")
+
+# Print number of negative values
+print("Number of negative values in X_train:", (X_train < 0).sum().sum())
+
+# Print number of NaN values
+print("Number of NaN values in X_train:", X_train.isna().sum().sum())
 
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
@@ -168,32 +175,35 @@ if method == "UMAP":
     plt.savefig(f"./data/plots/UMAP_{dim}.png")
     plt.close()
 
-# Create a DataFrame with the dimensionality reduction results for training set
-columns_name = [f"{method}_{i+1}" for i in range(dim)]
-train_dr_df = pd.DataFrame(X_train_dr, columns=columns_name)
-train_dr_df["barcode"] = X_train.index
-train_dr_df = train_dr_df[["barcode", *columns_name]]
+# # Create a DataFrame with the dimensionality reduction results for training set
+# columns_name = [f"{method}_{i+1}" for i in range(dim)]
+# train_dr_df = pd.DataFrame(X_train_dr, columns=columns_name)
+# train_dr_df["barcode"] = X_train.index
+# train_dr_df = train_dr_df[["barcode", *columns_name]]
 
-# Create a DataFrame with the dimensionality reduction results for testing set
-test_dr_df = pd.DataFrame(X_test_dr, columns=columns_name)
-test_dr_df["barcode"] = X_test.index
-test_dr_df = test_dr_df[["barcode", *columns_name]]
+# # Create a DataFrame with the dimensionality reduction results for testing set
+# test_dr_df = pd.DataFrame(X_test_dr, columns=columns_name)
+# test_dr_df["barcode"] = X_test.index
+# test_dr_df = test_dr_df[["barcode", *columns_name]]
 
+# Print the head of the DataFrames
+print(X_train_dr)
+print(X_test_dr)
 
-# Define the model architecture
-model = Sequential()
-model.add(Dense(64, activation='relu', input_dim=dataset.shape[1]))
-model.add(Dense(64, activation='relu', input_dim=dataset.shape[1]))
-model.add(Dropout(0.3))
-model.add(Dense(64, activation='relu'))
-model.add(Dropout(0.3))
-model.add(Dense(1, activation='sigmoid'))
+# # Define the model architecture
+# model = Sequential()
+# model.add(Dense(64, activation='relu', input_dim=dataset.shape[1]))
+# model.add(Dense(64, activation='relu', input_dim=dataset.shape[1]))
+# model.add(Dropout(0.3))
+# model.add(Dense(64, activation='relu'))
+# model.add(Dropout(0.3))
+# model.add(Dense(1, activation='sigmoid'))
 
-# Compile the model
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+# # Compile the model
+# model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-# Print the number of parameters in the model
-print("Number of parameters:", model.count_params())
+# # Print the number of parameters in the model
+# print("Number of parameters:", model.count_params())
 
-# Train the model
+# # Train the model
 #model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
