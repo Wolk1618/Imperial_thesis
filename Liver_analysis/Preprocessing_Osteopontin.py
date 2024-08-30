@@ -260,7 +260,7 @@ seuratObj.obs["doublet_scores"] = doublet_scores
 # plt.savefig("./data/plots/doublet_scores.png")
 # plt.show()
 
-seuratObj = seuratObj[seuratObj.obs["doublet_scores"] < 250, :]
+seuratObj = seuratObj[seuratObj.obs["doublet_scores"] < 200, :]
 
 # Number of cells and genes
 print(f"Number of cells: {seuratObj.n_obs}")
@@ -420,11 +420,74 @@ sc.pp.filter_genes(seuratObj, min_cells=3)
 print(f"Number of cells: {seuratObj.n_obs}")
 print(f"Number of genes: {seuratObj.n_vars}")
 
+
+##############################
+##### Adding the labels ######
+##############################
+print("Adding the labels")
+
+# Load the cell names from annot_cd45pos.csv file
+annot_data_cell_names = np.loadtxt('./data/cd45+/annot_cd45pos.csv', delimiter=',', usecols=(0), dtype=str)
+# Remove the " at the beginning and end of each string element
+annot_data_cell_names = np.array([s.strip('"') for s in annot_data_cell_names][1:])
+
+# Load the labels from annot_cd45pos.csv file
+annot_data_labels = np.loadtxt('./data/cd45+/annot_cd45pos.csv', delimiter=',', usecols=(4), dtype=str)
+annot_data_labels = [s.strip('"') for s in annot_data_labels][1:]
+
+# Filtering the CSR matrix
+filtered_barcodes_data = np.intersect1d(seuratObj.obs_names, annot_data_cell_names)
+
+print(f"Number of cells in seuratObj: {seuratObj.n_obs}")
+print(f"Number of cells in annot_data_cell_names: {len(annot_data_cell_names)}")
+print(f"Number of cells in filtered_barcodes_data: {len(filtered_barcodes_data)}")
+
+# Filter the Seurat object
+filtered_barcodes_indexes = [np.where(seuratObj.obs_names == barcode)[0][0] for barcode in filtered_barcodes_data]
+filtered_seuratObj = seuratObj[filtered_barcodes_indexes, :].copy()
+
+# Reorder annot_data_labels to match barcodes_data
+filtered_data_labels_index = [np.where(annot_data_cell_names == barcode)[0][0] for barcode in filtered_barcodes_data]
+annot_data_labels_reordered = [annot_data_labels[i] for i in filtered_data_labels_index]
+annot_data_labels = annot_data_labels_reordered
+
+# Deleting useless variables
+del filtered_data_labels_index
+del filtered_barcodes_indexes
+del seuratObj
+del annot_data_cell_names
+del annot_data_labels_reordered
+del filtered_barcodes_data
+
+# Create a dense DataFrame from the seurat object
+df = pd.DataFrame(filtered_seuratObj.X.toarray(), index=filtered_seuratObj.obs_names, columns=filtered_seuratObj.var_names)
+
+df['healthy'] = annot_data_labels
+del filtered_seuratObj
+del annot_data_labels
+
+# Add the labels to df
+df['label'] = df['healthy'].str.startswith("SD").astype(int)
+df = df.drop('healthy', axis=1)
+
+# Balance the dataset with equal number of 1s and 0s
+num_1 = df['label'].sum()
+num_0 = len(df['label']) - num_1
+num_samples = min(num_0, num_1)
+df_0 = df[df['label'] == 0].sample(num_samples, random_state=42)
+df_1 = df[df['label'] == 1].sample(num_samples, random_state=42)
+df_balanced = pd.concat([df_0, df_1])
+
+# Shuffle the dataframe
+df_balanced = df_balanced.sample(frac=1, random_state=42)
+
+
 ###################
 ## Storing data ###
 ###################
+print("Storing data")
 
-# Save Seurat object
-seuratObj.write("./data/OstPreprocessingSeuratObj.h5ad")
+# Save the balanced dataset
+df_balanced.to_csv("./data/preprocessing_osteopontin.csv")
 
 print("Pre processing done")
