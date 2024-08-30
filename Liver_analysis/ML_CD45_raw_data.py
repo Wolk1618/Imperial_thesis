@@ -1,18 +1,19 @@
 import numpy as np
-from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
 import pandas as pd
-from scipy.io import mmread
-
+import shap
 import tensorflow as tf
 import keras
+
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Input
 from keras.utils import Sequence, to_categorical
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping
 
-import shap
-import matplotlib.pyplot as plt
+from scipy.io import mmread
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import f1_score
 
 
 print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
@@ -104,8 +105,8 @@ df_balanced = df_balanced.sample(frac=1, random_state=42)
 # Count the number of 1s and 0s in df['healthy']
 num_1 = df_balanced['healthy'].sum()
 num_0 = len(df_balanced['healthy']) - num_1
-print("Number of 1s:", num_1)
-print("Number of 0s:", num_0)
+# print("Number of 1s:", num_1)
+# print("Number of 0s:", num_0)
 
 """ # Create a new sparse DataFrame from the CSR matrix
 csr_matrix = pd.DataFrame.sparse.from_spmatrix(df).sparse.to_csr()
@@ -128,8 +129,18 @@ sparse_df = pd.read_csv('/home/thomas/Documents/Imperial/Thesis/Project_repo/dat
 labels = to_categorical(df_balanced['healthy'], num_classes=2)
 dataset = df_balanced.drop('healthy', axis=1)
 
+print("labels")
+print(pd.DataFrame(labels).head(100))
+print("dataset")
+print(dataset.head(100))
+
 # Split the dataset into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(dataset, labels, test_size=0.2, random_state=42)
+
+print("Xtrain")
+print(X_train.head(100))
+print("ytrain")
+print(pd.DataFrame(y_train).head(100))
 
 # Deleting useless variables to free up memory
 del df
@@ -190,8 +201,20 @@ model.summary()
 # Train the model
 history = model.fit(X_train, y_train,
                     epochs=100,
+                    batch_size=X_train.shape[0],
                     validation_split=0.2,
                     callbacks=[early_stopping])
+
+# Plot the accuracy evolution for each epoch
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('Model Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend(['Train', 'Validation'], loc='upper left')
+plt.savefig('./data/plot_accuracy.png')
+plt.show()
+
 
 ########################################
 ########################################
@@ -200,12 +223,29 @@ history = model.fit(X_train, y_train,
 # Evaluate the model
 loss, accuracy = model.evaluate(X_test, y_test)
 print(f'Test Accuracy: {accuracy}')
+# Predict the labels for the test set
+y_pred = model.predict(X_test)
 
-explainer = shap.DeepExplainer(model, X_test)
-shap_values = explainer.shap_values(X_test)
-shap.summary_plot(shap_values, X_test)
+# Convert the predicted probabilities to binary labels
+y_pred_binary = np.argmax(y_pred, axis=1)
+
+# Convert the true labels to binary labels
+y_test_binary = np.argmax(y_test, axis=1)
+
+# Compute the F1 score
+f1 = f1_score(y_test_binary, y_pred_binary)
+
+print("F1 Score:", f1)
+
+X_train_np = X_train.to_numpy()
+X_test_np = X_test.to_numpy()
+background = X_train_np[np.random.choice(X_train_np.shape[0], 100, replace=False)]
+
+explainer = shap.DeepExplainer(model, background)
+shap_values = explainer.shap_values(X_test_np)
+shap.summary_plot(shap_values, X_test_np)
 # Store the plot in local storage
-plt.savefig('./data/plot.png')
+plt.savefig('./data/plot2.png')
 print("Plot saved to local storage")
 
 # Save the model to local storage
