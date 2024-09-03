@@ -8,7 +8,7 @@ import pandas as pd
 import statsmodels.discrete.discrete_model
 from anndata import AnnData
 import scipy as sp
-import pickle
+# import pickle
 
 _EPS = np.finfo(float).eps
 
@@ -128,7 +128,6 @@ def SCTransform(adata,min_cells=5,gmean_eps=1,n_genes=2000,n_cells=None,bin_size
         genes_step1 = genes
         genes_log_gmean_step1 = genes_log_gmean
 
-
     umi = X.sum(1).A.flatten()
     log_umi = np.log10(umi)
     X2=X.copy()
@@ -152,7 +151,6 @@ def SCTransform(adata,min_cells=5,gmean_eps=1,n_genes=2000,n_cells=None,bin_size
         genes_step1 = np.sort(np.random.choice(genes_step1,size=n_genes,p=sampling_prob/sampling_prob.sum(),replace=False))
         genes_log_gmean_step1 = np.log10(gmean(X[cells_step1,:][:,genes_step1],eps=gmean_eps))
 
-
     bin_ind = np.ceil(np.arange(1,genes_step1.size+1) / bin_size)
     max_bin = max(bin_ind)
     print("max_bin : ", max_bin)
@@ -166,6 +164,9 @@ def SCTransform(adata,min_cells=5,gmean_eps=1,n_genes=2000,n_cells=None,bin_size
         mm = np.vstack((np.ones(data_step1.shape[0]),data_step1['log_umi'].values.flatten())).T
 
         pc_chunksize = umi_bin.shape[1] // os.cpu_count() + 1
+        print("batch : ", i)
+        print("pc_chunksize : ", pc_chunksize)
+        print(os.cpu_count())
         pool = Pool(os.cpu_count(), _parallel_init, [genes_bin_regress, umi_bin, gn, mm, ps])
         try:
             pool.map(_parallel_wrapper, range(umi_bin.shape[1]), chunksize=pc_chunksize)
@@ -173,7 +174,8 @@ def SCTransform(adata,min_cells=5,gmean_eps=1,n_genes=2000,n_cells=None,bin_size
             pool.close()
             pool.join()
 
-    ps = ps._getvalue()    
+    ps = ps._getvalue() 
+    print("after split") 
 
     model_pars = pd.DataFrame(data = np.vstack([ps[x] for x in gn[genes_step1]]),
                  columns = ['Intercept','log_umi','theta'],
@@ -195,6 +197,7 @@ def SCTransform(adata,min_cells=5,gmean_eps=1,n_genes=2000,n_cells=None,bin_size
     genes_step1 = genes_step1[filt]
     genes_log_gmean_step1 = genes_log_gmean_step1[filt]
 
+    print("before regression")
     z = FFTKDE(kernel='gaussian', bw='ISJ').fit(genes_log_gmean_step1)
     z.evaluate();
     bw = z.bw*bw_adjust
