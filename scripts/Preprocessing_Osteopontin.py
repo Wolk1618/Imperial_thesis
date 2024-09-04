@@ -483,6 +483,29 @@ df_balanced = df_balanced.sample(frac=1, random_state=42)
 
 
 ###################
+## Normalisation ##
+###################
+print("Normalising data")
+
+# Extract the labels and the dataset
+labels = df_balanced['label']
+dataset = df_balanced.drop('label', axis=1)
+
+# Calculate the total counts per cell
+cell_totals = dataset.sum(axis=1)
+
+# Calculate and apply the normalization factors
+normalization_factors = 1e4 / cell_totals
+normalized_df = dataset.multiply(normalization_factors, axis=0)
+
+# Log-transform the normalized data
+dataset = np.log2(normalized_df + 1)
+
+# Add the labels back to the dataset
+df_balanced['label'] = labels
+
+
+###################
 ## Storing data ###
 ###################
 print("Storing data")

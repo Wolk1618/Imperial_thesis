@@ -163,11 +163,10 @@ def SCTransform(adata,min_cells=5,gmean_eps=1,n_genes=2000,n_cells=None,bin_size
 
         mm = np.vstack((np.ones(data_step1.shape[0]),data_step1['log_umi'].values.flatten())).T
 
-        pc_chunksize = umi_bin.shape[1] // os.cpu_count() + 1
+        pc_chunksize = umi_bin.shape[1] // 16 + 1
         print("batch : ", i)
         print("pc_chunksize : ", pc_chunksize)
-        print(os.cpu_count())
-        pool = Pool(os.cpu_count(), _parallel_init, [genes_bin_regress, umi_bin, gn, mm, ps])
+        pool = Pool(16, _parallel_init, [genes_bin_regress, umi_bin, gn, mm, ps])
         try:
             pool.map(_parallel_wrapper, range(umi_bin.shape[1]), chunksize=pc_chunksize)
         finally:

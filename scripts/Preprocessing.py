@@ -191,8 +191,8 @@ df_balanced = pd.concat([df_0, df_1])
 # Shuffle the dataframe
 df_balanced = df_balanced.sample(frac=1, random_state=42)
 
-df_balanced.index = df_balanced['barcode']
-df_balanced = df_balanced.drop('barcode', axis=1)
+# df_balanced.index = df_balanced['barcode']
+# df_balanced = df_balanced.drop('barcode', axis=1)
 
 
 ###################
@@ -201,6 +201,6 @@ df_balanced = df_balanced.drop('barcode', axis=1)
 print("Storing data")
 
 # Save the balanced dataset
-df_balanced.to_csv("./data/preprocessing_osteopontin.csv")
+df_balanced.to_csv("./data/preprocessing_basic.csv")
 
 print("Pre processing done")
