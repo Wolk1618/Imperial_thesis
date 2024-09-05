@@ -27,6 +27,10 @@ dataset_path = f"./data/preprocessing_{preprocessing_type}.csv"
 # Load the balanced dataset
 df_balanced = pd.read_csv(dataset_path)
 
+# Print number of samples
+print("Number of samples:", len(df_balanced))
+exit()
+
 # Convert the labels to one-hot encoding
 labels = to_categorical(df_balanced['label'], num_classes=2)
 dataset = df_balanced.drop('label', axis=1)

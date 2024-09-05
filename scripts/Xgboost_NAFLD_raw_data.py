@@ -103,6 +103,7 @@ df_balanced = pd.concat([df_0, df_1])
 df_balanced = df_balanced.sample(frac=1, random_state=42)
 
 # Convert the labels to one-hot encoding
+raw_labels = df_balanced['label']
 labels = to_categorical(df_balanced['label'], num_classes=2)
 dataset = df_balanced.drop('label', axis=1)
 
@@ -174,11 +175,11 @@ shap_values = explainer(X_train_scaled)
 
 # Remove plot_type='bar' to get the default SHAP summary plot
 
-# # Visualize SHAP values
-# shap.summary_plot(shap_values[:, :, 0], X_train_scaled, feature_names=feature_names, plot_type='bar', color='#003E74')
-# plt.savefig('./data/nafld_shap_xgboost.png')
+# Visualize SHAP values
+shap.summary_plot(shap_values[:, :, 0], X_train_scaled, feature_names=feature_names, plot_type='bar', color='#003E74')
+plt.savefig('./data/nafld_shap_xgboost.png')
 
-# print("Plot saved to local storage")
+print("Plot saved to local storage")
 
 mean_shap_values = np.abs(shap_values[:, :, 0].values).mean(axis=0)
 
@@ -190,23 +191,49 @@ mean_shap_values = np.abs(shap_values[:, :, 0].values).mean(axis=0)
 
 # print("SHAP values saved to JSON file.")
 
-for i in range(1, 11):
-    # Extract the most important features based on SHAP values
-    important_features = np.argsort(mean_shap_values)[-i:]
-    important_feature_names = feature_names[important_features]
 
-    # Subset the data to include only the most important features
-    X_train_important = X_train_scaled[:, important_features]
-    X_test_important = X_test_scaled[:, important_features] 
+important_features = np.argsort(mean_shap_values)[-2:]
+important_feature_names = feature_names[important_features]
 
-    # Train a new XGBoost classifier using only the 10 most important features
-    new_model = xgboost.XGBClassifier()
-    new_model.fit(X_train_important, y_train)
+print("2 most important features:", important_feature_names)
+print("2 most important features indices:", important_features)
 
-    # Evaluate the new model
-    y_pred = new_model.predict(X_test_important)
-    accuracy = accuracy_score(y_test, y_pred)
-    print("n=%d, Accuracy: %.2f%%" % (i, accuracy*100.0))
+# Subset the data to include only the most important features
+X_train_important = X_train_scaled[:, important_features]
+
+X_important_healthy = X_train_important[np.argmax(y_train, axis=1) == 0]
+X_important_nafld = X_train_important[np.argmax(y_train, axis=1) == 1]
+
+# Plot the reduced dataset
+plt.figure(figsize=(8, 6))
+plt.scatter(X_important_healthy[:, 0], X_important_healthy[:, 1], c='blue', label='Healthy')
+plt.scatter(X_important_nafld[:, 0], X_important_nafld[:, 1], c='red', marker='s', label='Diseased')
+plt.xlabel(important_feature_names[0])
+plt.ylabel(important_feature_names[1])
+plt.xlim(-1, 10)
+plt.ylim(-1, 2)
+plt.title('Dataset Projected onto the 2 Most Important Features')
+plt.legend()
+plt.savefig('./data/nafld_reduced_dataset_plot.png')
+plt.show()
+
+# for i in range(1, 11):
+#     # Extract the most important features based on SHAP values
+#     important_features = np.argsort(mean_shap_values)[-i:]
+#     important_feature_names = feature_names[important_features]
+
+#     # Subset the data to include only the most important features
+#     X_train_important = X_train_scaled[:, important_features]
+#     X_test_important = X_test_scaled[:, important_features] 
+
+#     # Train a new XGBoost classifier using only the 10 most important features
+#     new_model = xgboost.XGBClassifier()
+#     new_model.fit(X_train_important, y_train)
+
+#     # Evaluate the new model
+#     y_pred = new_model.predict(X_test_important)
+#     accuracy = accuracy_score(y_test, y_pred)
+#     print("n=%d, Accuracy: %.2f%%" % (i, accuracy*100.0))
 
 
 ########################################
@@ -224,6 +251,7 @@ for i in range(1, 11):
 # # Convert feature_importances to a regular Python list
 # feature_importances_list = feature_importances.tolist()
 
+
 # # Create a dictionary to store feature importances
 # feature_importances_dict = {feature: importance for feature, importance in zip(dataset.columns, feature_importances_list)}
 
@@ -233,23 +261,105 @@ for i in range(1, 11):
 
 # print("Feature importances saved to JSON file.")
 
-# thresholds = sort(model.feature_importances_)
+# thresholds = []
+# sorted_feature_importances = np.sort(feature_importances)[::-1]
 
-# # Threshlds 100 - 1000
-# thresholds = [0.0015680799260735512, 0.001006592996418476, 0.0007586810970678926, 0.0006115009309723973, 0.0005175648257136345, 0.0004350869567133486, 0.00036716595059260726, 0.0003057601861655712, 0.0002663778141140938, 0.00022574636386707425]
+# for i in range(10):
+#     thresholds.append(sorted_feature_importances[i])
 
-# # Threshlds 10 - 100
-# thresholds = [0.009852479211986065, 0.005194795783609152, 0.0035654930397868156, 0.002884036861360073, 0.0026402354706078768, 0.0024152640253305435, 0.002194151980802417, 0.0018656301544979215, 0.001709192176349461, 0.0015680799260735512]
+# for i in range(19, 100, 10):
+#     thresholds.append(sorted_feature_importances[i])
+
+# for i in range(199, 1000, 100):
+#     thresholds.append(sorted_feature_importances[i])
+
 
 # for thresh in thresholds:
 #     # select features using threshold
 #     selection = SelectFromModel(model, threshold=thresh, prefit=True)
 #     select_X_train = selection.transform(X_train_scaled)
 #     # train model
-#     selection_model = xgboost.XGBClassifier(device='cuda')
+#     selection_model = xgboost.XGBClassifier()
 #     selection_model.fit(select_X_train, y_train)
 #     # eval model
 #     select_X_test = selection.transform(X_test_scaled)
 #     predictions = selection_model.predict(select_X_test)
 #     accuracy = accuracy_score(y_test, predictions)
-#     print("Thresh=%.3f, n=%d, Accuracy: %.2f%%" % (thresh, select_X_train.shape[1], accuracy*100.0))
+#     print("n=%d, Accuracy: %.2f%%" % (select_X_train.shape[1], accuracy*100.0))
+
+# Identify the indices of the 10 most important features
+# important_feature_indices = np.argsort(feature_importances)[-10:]
+# important_feature_names = np.array(dataset.columns)[important_feature_indices]
+
+# # Print the 2 most important features
+# print("10 most important features:", important_feature_names)
+# print("10 most important features indices:", important_feature_indices)
+
+# # Create a reduced dataset containing only the 2 most important features
+# X_train_reduced = X_train[:, important_feature_indices]
+# X_test_reduced = X_test[:, important_feature_indices]
+
+# # Plot the reduced dataset
+# plt.figure(figsize=(8, 6))
+# plt.scatter(X_train_reduced[:, 0], X_train_reduced[:, 1], c='red')
+# plt.scatter(X_test_reduced[:, 0], X_test_reduced[:, 1], c='blue')
+# plt.xlabel(important_feature_names[0])
+# plt.ylabel(important_feature_names[1])
+# plt.title('Dataset Projected onto the 2 Most Important Features')
+# plt.colorbar(label='Class Label')
+# plt.savefig('./data/nafld_reduced_dataset_plot.png')
+# plt.show()
+
+
+
+
+# # Train a simple perceptron on the reduced feature dataset
+# perceptron = Perceptron(max_iter=1000, random_state=42)
+# perceptron.fit(X_train_reduced, y_train)
+
+# # Evaluate the perceptron
+# y_pred = perceptron.predict(X_test_reduced)
+# accuracy = accuracy_score(y_test, y_pred)
+# print(f"Accuracy of the perceptron: {accuracy:.4f}")
+
+# # Get the most important feature
+# most_important_feature = dataset.columns[np.argmax(feature_importances)]
+# print("Most Important Feature:", most_important_feature)
+
+# # Subset the data to include only the most important feature
+# X_train_important = X_train_scaled[:, np.newaxis, dataset.columns == most_important_feature]
+# X_test_important = X_test_scaled[:, np.newaxis, dataset.columns == most_important_feature]
+
+# # Train a new XGBoost classifier using only the most important feature
+# new_model = xgboost.XGBClassifier()
+# new_model.fit(X_train_important, y_train)
+
+# # Evaluate the new model
+# accuracy = new_model.score(X_test_important, y_test)
+# print("Accuracy using the most important feature:", accuracy)
+
+# # Get the second most important feature
+# second_most_important_feature = dataset.columns[np.argsort(feature_importances)[-2]]
+
+# # Project the whole dataset on the 2 most important features
+# X_projected = X_train_scaled[:, np.newaxis, dataset.columns.isin([most_important_feature, second_most_important_feature])]
+
+# # Create a scatter plot of the projected dataset with color according to the label
+# plt.scatter(X_projected[:, 0], X_projected[:, 1], c=y_train, cmap='viridis')
+# plt.xlabel('Most Important Feature')
+# plt.ylabel('Second Most Important Feature')
+# plt.title('Dataset Projected on 2 Most Important Features')
+# plt.colorbar(label='Label')
+# plt.savefig('./data/nafld_projected_dataset.png')
+
+
+
+# # Project the whole dataset on the most important feature
+# X_projected = X_train_scaled[:, np.newaxis, dataset.columns == most_important_feature]
+
+# # Create a scatter plot of the projected dataset with color according to the label
+# plt.scatter(X_projected[:, 0], np.zeros_like(X_projected[:, 0]), c=y_train, cmap='viridis')
+# plt.xlabel('Most Important Feature')
+# plt.title('Dataset Projected on Most Important Feature')
+# plt.colorbar(label='Label')
+# plt.savefig('./data/nafld_projected_dataset_1D.png')

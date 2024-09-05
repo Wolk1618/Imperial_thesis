@@ -2,9 +2,8 @@
 data
 figures
 
-# useful files
-gene2go
-go-basic.obo
-
 # Miscaleanous
 *.pyc
+
+# HPC script
+job.sh
