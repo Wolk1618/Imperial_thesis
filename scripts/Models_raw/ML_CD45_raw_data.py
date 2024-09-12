@@ -18,26 +18,6 @@ from sklearn.metrics import f1_score
 
 print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 
-
-# class DataGenerator(Sequence):
-#     def __init__(self, X, y, batch_size):
-#         self.X = X
-#         self.y = y
-#         self.batch_size = batch_size
-
-#     def __len__(self):
-#         return int(np.ceil(len(self.X) / float(self.batch_size)))
-
-#     def __getitem__(self, idx):
-#         if (idx + 1) * self.batch_size > len(self.X):
-#             batch_X = np.asarray(self.X[idx * self.batch_size:])
-#             batch_y = np.asarray(self.y[idx * self.batch_size:])
-#             return batch_X, batch_y
-#         batch_X = np.asarray(self.X[idx * self.batch_size:(idx + 1) * self.batch_size])
-#         batch_y = np.asarray(self.y[idx * self.batch_size:(idx + 1) * self.batch_size])
-#         return batch_X, batch_y
-
-
 # Load the matrix.mtx file and convert it to CSR format
 matrix = mmread('./data/cd45+/matrix.mtx')
 matrix_csr = matrix.tocsr()
@@ -79,11 +59,6 @@ del annot_data_labels_reordered
 # Create a dense DataFrame from the CSR matrix
 df = pd.DataFrame(filtered_matrix_csr.toarray().T, index=filtered_barcodes_data, columns=df_features['name'])
 
-# Load the sparse matrix into a DataFrame
-# sparse_df = pd.DataFrame.sparse.from_spmatrix(filtered_matrix_csr)
-# df = sparse_df.sparse.to_coo().transpose()
-# df = pd.DataFrame.sparse.from_spmatrix(df, index=filtered_barcodes_data, columns=df_features['name'])
-
 # Add a new column 'healthy' to df
 df['type'] = annot_data_labels
 df['healthy'] = df['type'].str.startswith("SD").astype(int)
@@ -105,24 +80,6 @@ df_balanced = df_balanced.sample(frac=1, random_state=42)
 # Count the number of 1s and 0s in df['healthy']
 num_1 = df_balanced['healthy'].sum()
 num_0 = len(df_balanced['healthy']) - num_1
-# print("Number of 1s:", num_1)
-# print("Number of 0s:", num_0)
-
-""" # Create a new sparse DataFrame from the CSR matrix
-csr_matrix = pd.DataFrame.sparse.from_spmatrix(df).sparse.to_csr()
-df = pd.DataFrame.sparse.from_spmatrix(csr_matrix, index=filtered_barcodes_data, columns=df_features['name'])
-
-# Make the DataFrame sparse
-csr_matrix = sp.coo_matrix(df.values)
-sparse_df = pd.DataFrame.sparse.from_spmatrix(csr_matrix, index=filtered_barcodes_data, columns=df_features['name']) """
-
-""" # Store sparse_df to local storage
-csr_matrix = df.sparse.to_coo().tocsr()
-#sp.save_npz('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/sparse_df.npz', csr_matrix)
-print("Dataframe saved to local storage")
-
-# Load sparse_df from local storage
-sparse_df = pd.read_csv('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/sparse_df.csv') """
 
 # Convert the 'healthy' column to one-hot encoding
 #df = df.head(100).copy()
@@ -147,39 +104,16 @@ del df
 # del dataset
 del labels
 
-# Define the generator
-#train_generator = DataGenerator(X_train, y_train, batch_size=100)
 
 ########################################
-#############  BASE MODEL  #############
-########################################
-
-""" # Define the model architecture
-model = Sequential()
-model.add(Dense(256, activation='relu', input_dim=dataset.shape[1]))
-model.add(Dropout(0.3))
-model.add(Dense(16, activation='relu'))
-model.add(Dropout(0.3))
-model.add(Dense(1, activation='sigmoid'))
-
-# Compile the model
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-
-# Train the model
-model.fit(train_generator, epochs=5, validation_data=(X_test, y_test)) """
-
-
-########################################
-###### MODEL PROPOSED BY MISTRAL #######
+############# BASE MODEL ###############
 ########################################
 
 # Define the model
 model = Sequential([
     Input(shape=(dataset.shape[1],), sparse=True),
-    # Dense(1024, activation='relu'),
-    # Dropout(0.5),
-    # Dense(512, activation='relu'),
-    # Dropout(0.5),
+    Dense(512, activation='relu'),
+    Dropout(0.5),
     Dense(256, activation='relu'),
     Dropout(0.5),
     Dense(128, activation='relu'),
@@ -217,7 +151,7 @@ plt.show()
 
 
 ########################################
-########################################
+########## MODEL EVALUATION ############
 ########################################
 
 # Evaluate the model
@@ -237,24 +171,10 @@ f1 = f1_score(y_test_binary, y_pred_binary)
 
 print("F1 Score:", f1)
 
-X_train_np = X_train.to_numpy()
-X_test_np = X_test.to_numpy()
-background = X_train_np[np.random.choice(X_train_np.shape[0], 100, replace=False)]
-
-explainer = shap.DeepExplainer(model, background)
-shap_values = explainer.shap_values(X_test_np)
-shap.summary_plot(shap_values, X_test_np)
-# Store the plot in local storage
-plt.savefig('./data/plot2.png')
-print("Plot saved to local storage")
+########################################
+############# SAVE MODEL ###############
+########################################
 
 # Save the model to local storage
-model.save('./data/model_raw_2.h5')
+model.save('./data/model_raw.h5')
 print("Model saved to local storage")
-
-""" # Load the model from local storage
-loaded_model = keras.models.load_model('/home/thomas/Documents/Imperial/Thesis/Project_repo/data/model_raw.h5')
-
-# Print the number of parameters in the model
-num_params = loaded_model.count_params()
-print("Number of parameters in the model:", num_params) """
