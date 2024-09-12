@@ -176,10 +176,11 @@ shap_values = explainer(X_train_scaled)
 # Remove plot_type='bar' to get the default SHAP summary plot
 
 # Visualize SHAP values
-shap.summary_plot(shap_values[:, :, 0], X_train_scaled, feature_names=feature_names, plot_type='bar', color='#003E74')
-plt.savefig('./data/nafld_shap_xgboost.png')
+shap.summary_plot(shap_values[:, :, 0], X_train_scaled, feature_names=feature_names, color='#003E74')
+plt.savefig('./data/nafld_shap_xgboost_bees.png')
 
 print("Plot saved to local storage")
+exit()
 
 mean_shap_values = np.abs(shap_values[:, :, 0].values).mean(axis=0)
 

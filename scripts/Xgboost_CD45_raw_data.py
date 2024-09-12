@@ -99,7 +99,7 @@ X_test_scaled = scaler.transform(X_test)
 ############### XGBoost ################
 ########################################
 
-model = xgboost.XGBClassifier(device='cuda')
+model = xgboost.XGBClassifier(device='cuda', importance_type='gain')
 model.fit(X_train_scaled, y_train)
 
 
@@ -138,6 +138,10 @@ print("Model saved to local storage")
 # model = xgboost.XGBClassifier()
 # model.load_model('./data/model_xgboost.model')
 
+# Compute and display train accuracy
+train_accuracy = model.score(X_train_scaled, y_train)
+print("Train Accuracy:", train_accuracy)
+
 
 ########################################
 ############# SHAP PLOTS ###############
@@ -151,50 +155,83 @@ shap_values = explainer(X_train_scaled)
 
 # Remove plot_type='bar' to get the default SHAP summary plot
 
-# Visualize SHAP values for the first class (class 0)
-shap.summary_plot(shap_values[:, :, 0], X_train_scaled, feature_names=feature_names, plot_type='bar')
-plt.savefig('./data/shap_xgboost_class0.png')
+# # Visualize SHAP values
+# shap.summary_plot(shap_values[:, :, 0], X_train_scaled, feature_names=feature_names, plot_type='bar', color='#003E74')
+# plt.savefig('./data/wdsd_shap_xgboost.png')
 
-# Clean up the plots
-plt.clf()
-plt.close()
+# print("Plot saved to local storage")
 
-# Visualize SHAP values for the second class (class 1)
-shap.summary_plot(shap_values[:, :, 1], X_train_scaled, feature_names=feature_names, plot_type='bar')
-plt.savefig('./data/shap_xgboost_class1.png')
+mean_shap_values = np.abs(shap_values[:, :, 0].values).mean(axis=0)
 
-print("Plots saved to local storage")
+# # Store SHAP values to a JSON file
+# shap_values_dict = dict(zip(feature_names, mean_shap_values))
+# shap_values_dict = {k: float(v) for k, v in shap_values_dict.items()}  # Convert float32 values to float
+# with open('./data/wdsd_shap_values.json', 'w') as f:
+#     json.dump(shap_values_dict, f)
+
+# print("SHAP values saved to JSON file.")
+
+features_1_10 = range(10)
+features_1_100 = range(10, 100, 10)
+features_1_1000 = range(100, 1100, 100)
+top_features = list(features_1_10) + list(features_1_100) + list(features_1_1000)
+
+for i in top_features:
+    # Extract the most important features based on SHAP values
+    important_features = np.argsort(mean_shap_values)[-i:]
+    important_feature_names = feature_names[important_features]
+
+    # Subset the data to include only the most important features
+    X_train_important = X_train_scaled[:, important_features]
+    X_test_important = X_test_scaled[:, important_features] 
+
+    # Train a new XGBoost classifier using only the 10 most important features
+    new_model = xgboost.XGBClassifier()
+    new_model.fit(X_train_important, y_train)
+
+    # Evaluate the new model
+    y_pred = new_model.predict(X_test_important)
+    accuracy = accuracy_score(y_test, y_pred)
+    print("n=%d, Accuracy: %.2f%%" % (i, accuracy*100.0))
 
 
 ########################################
 ########## FEATURE IMPORTANCE ##########
 ########################################
 
-xgboost.plot_importance(model, max_num_features = 20)
-plt.savefig('./data/plot_importance.png')
+# model.get_booster().feature_names = list(dataset.columns)
 
-# Get feature importances
-feature_importances = model.feature_importances_
+# xgboost.plot_importance(model, max_num_features = 20, color='#003E74', importance_type='weight')
+# plt.savefig('./data/wdsd_plot_importance_weight.png')
 
-# Convert feature_importances to a regular Python list
-feature_importances_list = feature_importances.tolist()
+# # Get feature importances
+# feature_importances = model.feature_importances_
 
-# Create a dictionary to store feature importances
-feature_importances_dict = {feature: importance for feature, importance in zip(dataset.columns, feature_importances_list)}
+# # Convert feature_importances to a regular Python list
+# feature_importances_list = feature_importances.tolist()
 
-# Save feature importances to a JSON file
-with open('./data/feature_importances.json', 'w') as f:
-    json.dump(feature_importances_dict, f)
+# # Create a dictionary to store feature importances
+# feature_importances_dict = {feature: importance for feature, importance in zip(dataset.columns, feature_importances_list)}
+
+# # Save feature importances to a JSON file
+# with open('./data/feature_importances.json', 'w') as f:
+#     json.dump(feature_importances_dict, f)
 
 # print("Feature importances saved to JSON file.")
 
-# thresholds = sort(model.feature_importances_)
+# thresholds = []
+# sorted_feature_importances = np.sort(feature_importances)[::-1]
 
-# # Threshlds 100 - 1000
-# thresholds = [0.0015680799260735512, 0.001006592996418476, 0.0007586810970678926, 0.0006115009309723973, 0.0005175648257136345, 0.0004350869567133486, 0.00036716595059260726, 0.0003057601861655712, 0.0002663778141140938, 0.00022574636386707425]
+# for i in range(10):
+#     thresholds.append(sorted_feature_importances[i])
 
-# # Threshlds 10 - 100
-# thresholds = [0.009852479211986065, 0.005194795783609152, 0.0035654930397868156, 0.002884036861360073, 0.0026402354706078768, 0.0024152640253305435, 0.002194151980802417, 0.0018656301544979215, 0.001709192176349461, 0.0015680799260735512]
+# for i in range(19, 100, 10):
+#     thresholds.append(sorted_feature_importances[i])
+
+# for i in range(199, 1000, 100):
+#     thresholds.append(sorted_feature_importances[i])
+
+# print("\nStarting feature selection...\n")
 
 # for thresh in thresholds:
 #     # select features using threshold
