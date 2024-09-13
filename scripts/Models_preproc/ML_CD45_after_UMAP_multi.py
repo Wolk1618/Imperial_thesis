@@ -21,12 +21,6 @@ df = pd.DataFrame(annot_data[1:], columns=annot_data[0])
 df['umap_1'] = df['umap_1'].astype(float)
 df['umap_2'] = df['umap_2'].astype(float)
 
-""" # Check if the 'type' column starts with "SD"
-sd_count = df['type'].str.startswith("SD").value_counts()[True]
-
-# Check if the 'type' column starts with "WD"
-wd_count = df['type'].str.startswith("WD").value_counts()[True] """
-
 # Map the 'diet' column values to numeric labels
 df['label'] = df['diet'].map({
     'SD 12 weeks': 0,
@@ -89,8 +83,9 @@ print(confusion_matrix.astype(int))
 
 # Plot the confusion matrix as an image
 plt.figure(figsize=(8, 6))
-sns.heatmap(confusion_matrix, annot=True, cmap='Blues')
+sns.heatmap(confusion_matrix.astype(int), annot=True, cmap='Blues')
 plt.xlabel('Predicted Labels')
 plt.ylabel('True Labels')
 plt.title('Confusion Matrix')
+plt.savefig('./data/plots/confusion_matrix.png')
 plt.show()

@@ -191,12 +191,9 @@ df_balanced = pd.concat([df_0, df_1])
 # Shuffle the dataframe
 df_balanced = df_balanced.sample(frac=1, random_state=42)
 
-# df_balanced.index = df_balanced['barcode']
-# df_balanced = df_balanced.drop('barcode', axis=1)
-
 
 ###################
-## Storing data ###
+#### Store data ###
 ###################
 print("Storing data")
 

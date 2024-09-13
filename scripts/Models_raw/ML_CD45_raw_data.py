@@ -1,13 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import shap
 import tensorflow as tf
-import keras
 
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Input
-from keras.utils import Sequence, to_categorical
+from keras.utils import to_categorical
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping
 
@@ -17,6 +15,11 @@ from sklearn.metrics import f1_score
 
 
 print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+
+
+########################################
+############ LOAD THE DATA #############
+########################################
 
 # Load the matrix.mtx file and convert it to CSR format
 matrix = mmread('./data/cd45+/matrix.mtx')
@@ -48,13 +51,18 @@ filtered_data_labels_index = [np.where(annot_data_cell_names == barcode)[0][0] f
 annot_data_labels_reordered = [annot_data_labels[i] for i in filtered_data_labels_index]
 annot_data_labels = annot_data_labels_reordered
 
-# Deleting useless variables
+# Deleting useless variables to free up memory
 del barcodes_data
 del features_data
 del matrix
 del matrix_csr
 del annot_data_cell_names
 del annot_data_labels_reordered
+
+
+########################################
+############ ADD THE LABELS ############
+########################################
 
 # Create a dense DataFrame from the CSR matrix
 df = pd.DataFrame(filtered_matrix_csr.toarray().T, index=filtered_barcodes_data, columns=df_features['name'])
@@ -82,22 +90,16 @@ num_1 = df_balanced['healthy'].sum()
 num_0 = len(df_balanced['healthy']) - num_1
 
 # Convert the 'healthy' column to one-hot encoding
-#df = df.head(100).copy()
 labels = to_categorical(df_balanced['healthy'], num_classes=2)
 dataset = df_balanced.drop('healthy', axis=1)
 
-print("labels")
-print(pd.DataFrame(labels).head(100))
-print("dataset")
-print(dataset.head(100))
+
+########################################
+########## SPLIT THE DATASET ###########
+########################################
 
 # Split the dataset into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(dataset, labels, test_size=0.2, random_state=42)
-
-print("Xtrain")
-print(X_train.head(100))
-print("ytrain")
-print(pd.DataFrame(y_train).head(100))
 
 # Deleting useless variables to free up memory
 del df

@@ -208,7 +208,6 @@ seuratObj = seuratObj[~seuratObj.obs.index.isin(outliers)]
 print("Total number of cells:", len(pca_data))
 print("Number of outliers:", len(outliers))
 
-
 # Number of cells and genes
 print(f"Number of cells: {seuratObj.n_obs}")
 print(f"Number of genes: {seuratObj.n_vars}")
@@ -218,13 +217,13 @@ print(f"Number of genes: {seuratObj.n_vars}")
 ########################
 print("Removing bad cells")
 
-# # Print distribution of UMI counts
-# plt.hist(seuratObj.obs["n_counts"], bins=50)
-# plt.xlabel("UMI counts")
-# plt.ylabel("Frequency")
-# plt.title("Distribution of UMI counts")
-# plt.savefig("./data/plots/UMI_counts.png")
-# plt.show()
+# Print distribution of UMI counts
+plt.hist(seuratObj.obs["n_counts"], bins=50)
+plt.xlabel("UMI counts")
+plt.ylabel("Frequency")
+plt.title("Distribution of UMI counts")
+plt.savefig("./data/plots/UMI_counts.png")
+plt.show()
 
 # Remove low quality cells (low UMI counts and high mitochondrial proportion)
 seuratObj = seuratObj[seuratObj.obs["n_counts"] > 1000, :]
@@ -232,13 +231,13 @@ seuratObj = seuratObj[seuratObj.obs["n_counts"] > 1000, :]
 print(f"Number of cells: {seuratObj.n_obs}")
 print(f"Number of genes: {seuratObj.n_vars}")
 
-# # Print distribution of mitochondrial proportion
-# plt.hist(seuratObj.obs["percent_mito"], bins=50)
-# plt.xlabel("Mitochondrial proportion")
-# plt.ylabel("Frequency")
-# plt.title("Distribution of mitochondrial proportion")
-# plt.savefig("./data/plots/mito_proportion.png")
-# plt.show()
+# Print distribution of mitochondrial proportion
+plt.hist(seuratObj.obs["percent_mito"], bins=50)
+plt.xlabel("Mitochondrial proportion")
+plt.ylabel("Frequency")
+plt.title("Distribution of mitochondrial proportion")
+plt.savefig("./data/plots/mito_proportion.png")
+plt.show()
 
 seuratObj = seuratObj[seuratObj.obs["percent_mito"] <= 8, :]
 
@@ -252,13 +251,13 @@ labels = clf.fit(seuratObj.X).predict()
 doublet_scores = clf.doublet_score()  # higher means more likely to be doublet
 seuratObj.obs["doublet_scores"] = doublet_scores
 
-# # Print distribution of doublet scores
-# plt.hist(seuratObj.obs["doublet_scores"], bins=50)
-# plt.xlabel("Doublet scores")
-# plt.ylabel("Frequency")
-# plt.title("Distribution of doublet scores")
-# plt.savefig("./data/plots/doublet_scores.png")
-# plt.show()
+# Print distribution of doublet scores
+plt.hist(seuratObj.obs["doublet_scores"], bins=50)
+plt.xlabel("Doublet scores")
+plt.ylabel("Frequency")
+plt.title("Distribution of doublet scores")
+plt.savefig("./data/plots/doublet_scores.png")
+plt.show()
 
 seuratObj = seuratObj[seuratObj.obs["doublet_scores"] < 200, :]
 
@@ -267,25 +266,6 @@ print(f"Number of cells: {seuratObj.n_obs}")
 print(f"Number of genes: {seuratObj.n_vars}")
 
 # Remove actively proliferating cells
-# s_genes = ["Pax6"]
-# g2m_genes = [
-#     "Chek2",
-#     "Trex1",
-#     "Cdc20",
-#     "D1Pas1",
-#     "Haspin",
-#     "Mei1",
-#     "Mlh1",
-#     "Nfe2l1",
-#     "Piwil1",
-#     "Piwil2",
-#     "Spo11",
-#     "Terf1",
-#     "Topaz1",
-#     "Ttk",
-#     "Ube2b",
-#     "Xrcc5",
-# ]
 
 g2m_genes = [
     "Hmgb2",
@@ -392,18 +372,15 @@ s_genes = [
 
 sc.tl.score_genes_cell_cycle(seuratObj, s_genes=s_genes, g2m_genes=g2m_genes)
 
-# # Plot phase distribution
-# plt.hist(seuratObj.obs["phase"], bins=50)
-# plt.xlabel("Cell cycle phase")
-# plt.ylabel("Frequency")
-# plt.title("Distribution of cell cycle phase")
-# plt.savefig("./data/plots/cell_cycle_phase.png")
-# plt.show()
+# Plot phase distribution
+plt.hist(seuratObj.obs["phase"], bins=50)
+plt.xlabel("Cell cycle phase")
+plt.ylabel("Frequency")
+plt.title("Distribution of cell cycle phase")
+plt.savefig("./data/plots/cell_cycle_phase.png")
+plt.show()
 
 seuratObj = seuratObj[seuratObj.obs["phase"] != "G2M", :]
-
-
-### TODO : Update RawData and Barcodes
 
 # Number of cells and genes
 print(f"Number of cells: {seuratObj.n_obs}")
@@ -506,11 +483,11 @@ df_balanced['label'] = labels
 
 
 ###################
-## Storing data ###
+#### Store data ###
 ###################
 print("Storing data")
 
 # Save the balanced dataset
-df_balanced.to_csv("./data/preprocessing_osteopontin.csv")
+df_balanced.to_csv("./data/preprocessing_advanced.csv")
 
 print("Pre processing done")

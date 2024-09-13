@@ -3,7 +3,12 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from keras.models import Sequential
 from keras.layers import Dense, Dropout
+from sklearn.metrics import f1_score
 
+
+######################
+#### Loading data ####
+######################
 
 # Load the annot_cd45pos.csv file
 annot_data = np.loadtxt('./data/cd45+/annot_cd45pos.csv', delimiter=',', usecols=(0, 4, 8, 9), dtype=str)
@@ -32,7 +37,9 @@ labels = np.array(df['healthy'])
 # Split the dataset into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(dataset, labels, test_size=0.2, random_state=42)
 
-#print(X_train)
+######################
+#### Define model ####
+######################
 
 # Define the model architecture
 model = Sequential()
@@ -49,5 +56,23 @@ model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy']
 # Print the number of parameters in the model
 print("Number of parameters:", model.count_params())
 
+
+############################################
+####### Train and evaluate the model #######
+############################################
+
 # Train the model
-#model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
+model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
+
+# Print test accuracy
+test_loss, test_acc = model.evaluate(X_test, y_test)
+print('Test accuracy:', test_acc)
+
+# Print F1 score
+y_pred = model.predict(X_test)
+y_pred = np.round(y_pred)
+f1 = f1_score(y_test, y_pred)
+print('F1 score:', f1)
+
+# Save the model
+model.save('./models/model_binary.h5')
